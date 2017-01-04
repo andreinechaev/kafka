@@ -19,8 +19,7 @@ package kafka.metrics
 
 import java.util.Properties
 
-import com.yammer.metrics.Metrics
-import com.yammer.metrics.core.{Metric, MetricName, MetricPredicate}
+import com.codahale.metrics.Metric
 import org.junit.{After, Test}
 import org.junit.Assert._
 import kafka.integration.KafkaServerTestHarness
@@ -34,6 +33,7 @@ import scala.collection._
 import scala.collection.JavaConverters._
 import scala.util.matching.Regex
 import kafka.consumer.{ConsumerConfig, ZookeeperConsumerConnector}
+import org.apache.kafka.common.metrics.Metrics
 
 class MetricsTest extends KafkaServerTestHarness with Logging {
   val numNodes = 2
@@ -64,11 +64,12 @@ class MetricsTest extends KafkaServerTestHarness with Logging {
     //this assertion is only used for creating the metrics for DelayedFetchMetrics, it should never fail, but should not be removed
     assertNotNull(DelayedFetchMetrics)
 
-    val countOfStaticMetrics = Metrics.defaultRegistry().allMetrics().keySet().size
+    val metrics = new Metrics().metrics()
+    val countOfStaticMetrics = metrics.keySet().size
 
     for (i <- 0 to 5) {
       createAndShutdownStep("group" + i % 3, "consumer" + i % 2, "producer" + i % 2)
-      assertEquals(countOfStaticMetrics, Metrics.defaultRegistry().allMetrics().keySet().size)
+      assertEquals(countOfStaticMetrics, metrics.keySet().size)
     }
   }
 
@@ -92,13 +93,6 @@ class MetricsTest extends KafkaServerTestHarness with Logging {
     assertFalse("Topic metrics exists after deleteTopic", checkTopicMetricsExists(topic))
   }
 
-  @Test
-  def testClusterIdMetric(): Unit ={
-    // Check if clusterId metric exists.
-    val metrics = Metrics.defaultRegistry().allMetrics
-    assertEquals(metrics.keySet.asScala.count(_.getMBeanName().equals("kafka.server:type=KafkaServer,name=ClusterId")), 1)
-  }
-
   @deprecated("This test has been deprecated and it will be removed in a future release", "0.10.0.0")
   def createAndShutdownStep(group: String, consumerId: String, producerId: String): Unit = {
     sendMessages(servers, topic, nMessages)
@@ -113,9 +107,9 @@ class MetricsTest extends KafkaServerTestHarness with Logging {
 
   private def checkTopicMetricsExists(topic: String): Boolean = {
     val topicMetricRegex = new Regex(".*("+topic+")$")
-    val metricGroups = Metrics.defaultRegistry().groupedMetrics(MetricPredicate.ALL).entrySet()
+    val metricGroups = new Metrics().metrics().entrySet()
     for(metricGroup <- metricGroups.asScala) {
-      if (topicMetricRegex.pattern.matcher(metricGroup.getKey()).matches)
+      if (topicMetricRegex.pattern.matcher(metricGroup.getKey.name()).matches)
         return true
     }
     false

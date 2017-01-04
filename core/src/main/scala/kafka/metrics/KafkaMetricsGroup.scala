@@ -20,8 +20,7 @@ package kafka.metrics
 
 import java.util.concurrent.TimeUnit
 
-import com.yammer.metrics.Metrics
-import com.yammer.metrics.core.{Gauge, MetricName}
+import com.codahale.metrics._
 import kafka.consumer.{ConsumerTopicStatsRegistry, FetchRequestAndResponseStatsRegistry}
 import kafka.producer.{ProducerRequestStatsRegistry, ProducerStatsRegistry, ProducerTopicStatsRegistry}
 import kafka.utils.Logging
@@ -29,6 +28,9 @@ import kafka.utils.Logging
 import scala.collection.immutable
 import scala.collection.JavaConverters._
 import javax.management.ObjectName
+
+import org.apache.kafka.common.metrics.Metrics
+import org.apache.kafka.common.MetricName
 
 
 trait KafkaMetricsGroup extends Logging {
@@ -66,31 +68,33 @@ trait KafkaMetricsGroup extends Logging {
       nameBuilder.append(name)
     }
 
-    val scope: String = KafkaMetricsGroup.toScope(tags).getOrElse(null)
+    val scope: String = KafkaMetricsGroup.toScope(tags).orNull
     val tagsName = KafkaMetricsGroup.toMBeanName(tags)
     tagsName match {
       case Some(tn) =>
         nameBuilder.append(",").append(tn)
       case None =>
     }
-
-    new MetricName(group, typeName, name, scope, nameBuilder.toString())
+    val metrics = new Metrics()
+    metrics.metricName(group, typeName, name, scope, nameBuilder.toString())
   }
 
   def newGauge[T](name: String, metric: Gauge[T], tags: scala.collection.Map[String, String] = Map.empty) =
-    Metrics.defaultRegistry().newGauge(metricName(name, tags), metric)
+    new Gauge[T] {
+      override def getValue: T = metric.getValue
+    }
 
-  def newMeter(name: String, eventType: String, timeUnit: TimeUnit, tags: scala.collection.Map[String, String] = Map.empty) =
-    Metrics.defaultRegistry().newMeter(metricName(name, tags), eventType, timeUnit)
+  def newMeter(name: String, eventType: String, timeUnit: TimeUnit, tags: scala.collection.Map[String, String] = Map.empty): Meter =
+    new MetricRegistry().meter(name)
 
-  def newHistogram(name: String, biased: Boolean = true, tags: scala.collection.Map[String, String] = Map.empty) =
-    Metrics.defaultRegistry().newHistogram(metricName(name, tags), biased)
+  def newHistogram(name: String, biased: Boolean = true, tags: scala.collection.Map[String, String] = Map.empty): Histogram =
+    new MetricRegistry().histogram(name)
 
-  def newTimer(name: String, durationUnit: TimeUnit, rateUnit: TimeUnit, tags: scala.collection.Map[String, String] = Map.empty) =
-    Metrics.defaultRegistry().newTimer(metricName(name, tags), durationUnit, rateUnit)
+  def newTimer(name: String, durationUnit: TimeUnit, rateUnit: TimeUnit, tags: scala.collection.Map[String, String] = Map.empty): Timer =
+    new MetricRegistry().timer(name)
 
-  def removeMetric(name: String, tags: scala.collection.Map[String, String] = Map.empty) =
-    Metrics.defaultRegistry().removeMetric(metricName(name, tags))
+  def removeMetric(name: String, tags: scala.collection.Map[String, String] = Map.empty): Boolean =
+    new MetricRegistry().remove(name)
 
 
 }
@@ -199,16 +203,16 @@ object KafkaMetricsGroup extends KafkaMetricsGroup with Logging {
   private def removeAllMetricsInList(metricNameList: immutable.List[MetricName], clientId: String) {
     metricNameList.foreach(metric => {
       val pattern = (".*clientId=" + clientId + ".*").r
-      val registeredMetrics = Metrics.defaultRegistry().allMetrics().keySet().asScala
+      val metricsSet = new Metrics().metrics().keySet()
+      val registeredMetrics = metricsSet.asScala
       for (registeredMetric <- registeredMetrics) {
-        if (registeredMetric.getGroup == metric.getGroup &&
-          registeredMetric.getName == metric.getName &&
-          registeredMetric.getType == metric.getType) {
-          pattern.findFirstIn(registeredMetric.getMBeanName) match {
+        if (registeredMetric.group() == metric.group() &&
+          registeredMetric.name() == metric.name()) {
+          pattern.findFirstIn(registeredMetric.name()) match {
             case Some(_) => {
-              val beforeRemovalSize = Metrics.defaultRegistry().allMetrics().keySet().size
-              Metrics.defaultRegistry().removeMetric(registeredMetric)
-              val afterRemovalSize = Metrics.defaultRegistry().allMetrics().keySet().size
+              val beforeRemovalSize = metricsSet.size
+              new Metrics().removeMetric(registeredMetric)
+              val afterRemovalSize = metricsSet.size
               trace("Removing metric %s. Metrics registry size reduced from %d to %d".format(
                 registeredMetric, beforeRemovalSize, afterRemovalSize))
             }

@@ -29,11 +29,11 @@ import kafka.message.ByteBufferMessageSet
 import java.io.IOException
 import java.util.concurrent.locks.ReentrantReadWriteLock
 
+import com.codahale.metrics.Gauge
 import org.apache.kafka.common.errors.{NotEnoughReplicasException, NotLeaderForPartitionException}
 import org.apache.kafka.common.protocol.Errors
 
 import scala.collection.JavaConverters._
-import com.yammer.metrics.core.Gauge
 import org.apache.kafka.common.requests.PartitionState
 import org.apache.kafka.common.utils.Time
 
@@ -68,7 +68,7 @@ class Partition(val topic: String,
 
   newGauge("UnderReplicated",
     new Gauge[Int] {
-      def value = {
+      def getValue: Int = {
         if (isUnderReplicated) 1 else 0
       }
     },
@@ -77,7 +77,7 @@ class Partition(val topic: String,
 
   newGauge("InSyncReplicasCount",
     new Gauge[Int] {
-      def value = {
+      def getValue: Int = {
         if (isLeaderReplicaLocal) inSyncReplicas.size else 0
       }
     },
@@ -86,7 +86,7 @@ class Partition(val topic: String,
 
   newGauge("ReplicasCount",
     new Gauge[Int] {
-      def value = {
+      def getValue: Int = {
         if (isLeaderReplicaLocal) assignedReplicas.size else 0
       }
     },
@@ -124,10 +124,7 @@ class Partition(val topic: String,
 
   def getReplica(replicaId: Int = localBrokerId): Option[Replica] = {
     val replica = assignedReplicaMap.get(replicaId)
-    if (replica == null)
-      None
-    else
-      Some(replica)
+    Option(replica)
   }
 
   def leaderReplicaIfLocal(): Option[Replica] = {

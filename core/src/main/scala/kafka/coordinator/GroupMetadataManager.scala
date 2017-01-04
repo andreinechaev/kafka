@@ -46,7 +46,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 
-import com.yammer.metrics.core.Gauge
+import com.codahale.metrics.Gauge
 import kafka.api.{ApiVersion, KAFKA_0_10_1_IV0}
 import kafka.utils.CoreUtils.inLock
 
@@ -81,7 +81,7 @@ class GroupMetadataManager(val brokerId: Int,
 
   newGauge("NumOffsets",
     new Gauge[Int] {
-      def value = groupMetadataCache.values.map(group => {
+      def getValue: Int = groupMetadataCache.values.map(group => {
         group synchronized { group.numOffsets }
       }).sum
     }
@@ -89,7 +89,7 @@ class GroupMetadataManager(val brokerId: Int,
 
   newGauge("NumGroups",
     new Gauge[Int] {
-      def value = groupMetadataCache.size
+      def getValue: Int = groupMetadataCache.size
     }
   )
 

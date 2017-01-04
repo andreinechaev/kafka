@@ -23,7 +23,7 @@ import org.apache.kafka.common.protocol.ApiKeys
 import org.apache.kafka.common.requests.{AbstractRequest, AbstractResponse}
 
 import scala.collection._
-import com.yammer.metrics.core.{Gauge, Meter}
+import com.codahale.metrics.{Gauge, Meter}
 import java.util.concurrent.TimeUnit
 
 import kafka.admin.AdminUtils
@@ -178,14 +178,14 @@ class KafkaController(val config : KafkaConfig, zkUtils: ZkUtils, val brokerStat
   newGauge(
     "ActiveControllerCount",
     new Gauge[Int] {
-      def value() = if (isActive) 1 else 0
+      def getValue() = if (isActive()) 1 else 0
     }
   )
 
   newGauge(
     "OfflinePartitionsCount",
     new Gauge[Int] {
-      def value(): Int = {
+      def getValue(): Int = {
         inLock(controllerContext.controllerLock) {
           if (!isActive())
             0
@@ -199,7 +199,7 @@ class KafkaController(val config : KafkaConfig, zkUtils: ZkUtils, val brokerStat
   newGauge(
     "PreferredReplicaImbalanceCount",
     new Gauge[Int] {
-      def value(): Int = {
+      def getValue(): Int = {
         inLock(controllerContext.controllerLock) {
           if (!isActive())
             0

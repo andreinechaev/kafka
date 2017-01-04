@@ -22,7 +22,7 @@ import java.nio._
 import java.util.Date
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 
-import com.yammer.metrics.core.Gauge
+import com.codahale.metrics.Gauge
 import kafka.common._
 import kafka.message._
 import kafka.metrics.KafkaMetricsGroup
@@ -89,12 +89,12 @@ class LogCleaner(val config: CleanerConfig,
   /* a metric to track the maximum utilization of any thread's buffer in the last cleaning */
   newGauge("max-buffer-utilization-percent", 
            new Gauge[Int] {
-             def value: Int = cleaners.map(_.lastStats).map(100 * _.bufferUtilization).max.toInt
+             def getValue: Int = cleaners.map(_.lastStats).map(100 * _.bufferUtilization).max.toInt
            })
   /* a metric to track the recopy rate of each thread's last cleaning */
   newGauge("cleaner-recopy-percent", 
            new Gauge[Int] {
-             def value: Int = {
+             def getValue: Int = {
                val stats = cleaners.map(_.lastStats)
                val recopyRate = stats.map(_.bytesWritten).sum.toDouble / math.max(stats.map(_.bytesRead).sum, 1)
                (100 * recopyRate).toInt
@@ -103,7 +103,7 @@ class LogCleaner(val config: CleanerConfig,
   /* a metric to track the maximum cleaning time for the last cleaning from each thread */
   newGauge("max-clean-time-secs",
            new Gauge[Int] {
-             def value: Int = cleaners.map(_.lastStats).map(_.elapsedSecs).max.toInt
+             def getValue: Int = cleaners.map(_.lastStats).map(_.elapsedSecs).max.toInt
            })
   
   /**

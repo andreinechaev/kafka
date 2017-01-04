@@ -20,7 +20,7 @@ import java.io.{File, IOException}
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
 
-import com.yammer.metrics.core.Gauge
+import com.codahale.metrics.Gauge
 import kafka.api._
 import kafka.cluster.{Partition, Replica}
 import kafka.common._
@@ -133,7 +133,7 @@ class ReplicaManager(val config: KafkaConfig,
   val leaderCount = newGauge(
     "LeaderCount",
     new Gauge[Int] {
-      def value = {
+      def getValue: Int = {
           getLeaderPartitions().size
       }
     }
@@ -141,13 +141,13 @@ class ReplicaManager(val config: KafkaConfig,
   val partitionCount = newGauge(
     "PartitionCount",
     new Gauge[Int] {
-      def value = allPartitions.size
+      def getValue: Int = allPartitions.size
     }
   )
   val underReplicatedPartitions = newGauge(
     "UnderReplicatedPartitions",
     new Gauge[Int] {
-      def value = underReplicatedPartitionCount()
+      def getValue : Int = underReplicatedPartitionCount()
     }
   )
   val isrExpandRate = newMeter("IsrExpandsPerSec",  "expands", TimeUnit.SECONDS)

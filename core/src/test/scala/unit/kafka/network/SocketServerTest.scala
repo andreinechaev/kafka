@@ -23,8 +23,7 @@ import java.nio.ByteBuffer
 import java.util.{HashMap, Random}
 import javax.net.ssl._
 
-import com.yammer.metrics.core.Gauge
-import com.yammer.metrics.{Metrics => YammerMetrics}
+import com.codahale.metrics.Gauge
 import kafka.server.KafkaConfig
 import kafka.utils.TestUtils
 import org.apache.kafka.common.TopicPartition
@@ -340,7 +339,7 @@ class SocketServerTest extends JUnitSuite {
       val request = channel.receiveRequest(2000)
 
       val requestMetrics = RequestMetrics.metricsMap(ApiKeys.forId(request.requestId).name)
-      def totalTimeHistCount(): Long = requestMetrics.totalTimeHist.count
+      def totalTimeHistCount(): Long = requestMetrics.totalTimeHist.getCount
       val expectedTotalTimeCount = totalTimeHistCount() + 1
 
       // send a large buffer to ensure that the broker detects the client disconnection while writing to the socket channel.
@@ -382,7 +381,7 @@ class SocketServerTest extends JUnitSuite {
         s"Idle connection `${request.connectionId}` was not closed by selector")
 
       val requestMetrics = RequestMetrics.metricsMap(ApiKeys.forId(request.requestId).name)
-      def totalTimeHistCount(): Long = requestMetrics.totalTimeHist.count
+      def totalTimeHistCount(): Long = requestMetrics.totalTimeHist.getCount
       val expectedTotalTimeCount = totalTimeHistCount() + 1
 
       processRequest(channel, request)
@@ -401,11 +400,9 @@ class SocketServerTest extends JUnitSuite {
   def testMetricCollectionAfterShutdown(): Unit = {
     server.shutdown()
 
-    val sum = YammerMetrics
-      .defaultRegistry
-      .allMetrics.asScala
-      .filterKeys(k => k.getName.endsWith("IdlePercent") || k.getName.endsWith("NetworkProcessorAvgIdlePercent"))
-      .collect { case (_, metric: Gauge[_]) => metric.value.asInstanceOf[Double] }
+    val sum = new Metrics().metrics().asScala
+      .filterKeys(k => k.name().endsWith("IdlePercent") || k.name().endsWith("NetworkProcessorAvgIdlePercent"))
+      .collect { case (_, metric) => metric.value.asInstanceOf[Double] }
       .sum
 
     assertEquals(0, sum, 0)

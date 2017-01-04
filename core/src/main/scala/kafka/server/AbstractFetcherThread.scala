@@ -35,7 +35,7 @@ import scala.collection.JavaConverters._
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 
-import com.yammer.metrics.core.Gauge
+import com.codahale.metrics.Gauge
 import org.apache.kafka.common.TopicPartition
 import org.apache.kafka.common.internals.PartitionStates
 
@@ -282,7 +282,7 @@ class FetcherLagMetrics(metricId: ClientIdTopicPartition) extends KafkaMetricsGr
 
   newGauge(FetcherMetrics.ConsumerLag,
     new Gauge[Long] {
-      def value = lagVal.get
+      def getValue = lagVal.get
     },
     tags
   )

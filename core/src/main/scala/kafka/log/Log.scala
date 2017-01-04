@@ -34,7 +34,7 @@ import org.apache.kafka.common.requests.ListOffsetRequest
 
 import scala.collection.Seq
 import scala.collection.JavaConverters._
-import com.yammer.metrics.core.Gauge
+import com.codahale.metrics.Gauge
 import org.apache.kafka.common.utils.{Time, Utils}
 
 object LogAppendInfo {
@@ -126,30 +126,30 @@ class Log(@volatile var dir: File,
 
   newGauge("NumLogSegments",
     new Gauge[Int] {
-      def value = numberOfSegments
+      def getValue: Int = numberOfSegments
     },
     tags)
 
   newGauge("LogStartOffset",
     new Gauge[Long] {
-      def value = logStartOffset
+      def getValue = logStartOffset
     },
     tags)
 
   newGauge("LogEndOffset",
     new Gauge[Long] {
-      def value = logEndOffset
+      def getValue = logEndOffset
     },
     tags)
 
   newGauge("Size",
     new Gauge[Long] {
-      def value = size
+      def getValue = size
     },
     tags)
 
   /** The name of this log */
-  def name  = dir.getName()
+  def name  = dir.getName
 
   /* Load the log segments from the log files on disk */
   private def loadSegments() {
@@ -283,8 +283,8 @@ class Log(@volatile var dir: File,
 
   private def recoverLog() {
     // if we have the clean shutdown marker, skip recovery
-    if(hasCleanShutdownFile) {
-      this.recoveryPoint = activeSegment.nextOffset
+    if(hasCleanShutdownFile()) {
+      this.recoveryPoint = activeSegment.nextOffset()
       return
     }
 

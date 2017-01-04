@@ -23,7 +23,7 @@ import java.util.concurrent._
 import java.util.concurrent.atomic._
 import java.util.concurrent.locks.ReentrantLock
 
-import com.yammer.metrics.core.Gauge
+import com.codahale.metrics.Gauge
 import kafka.api._
 import kafka.client.ClientUtils
 import kafka.cluster._
@@ -37,6 +37,7 @@ import kafka.utils.ZkUtils._
 import kafka.utils._
 import org.I0Itec.zkclient.exception.ZkNodeExistsException
 import org.I0Itec.zkclient.{IZkChildListener, IZkDataListener, IZkStateListener}
+import org.apache.kafka.common.metrics.Metrics
 import org.apache.kafka.common.protocol.Errors
 import org.apache.kafka.common.security.JaasUtils
 import org.apache.kafka.common.utils.Time
@@ -81,7 +82,7 @@ import scala.collection.JavaConverters._
  *
  */
 private[kafka] object ZookeeperConsumerConnector {
-  val shutdownCommand: FetchedDataChunk = new FetchedDataChunk(null, null, -1L)
+  val shutdownCommand: FetchedDataChunk = FetchedDataChunk(null, null, -1L)
 }
 
 private[kafka] class ZookeeperConsumerConnector(val config: ConsumerConfig,
@@ -116,13 +117,13 @@ private[kafka] class ZookeeperConsumerConnector(val config: ConsumerConfig,
   newGauge(
     "yammer-metrics-count",
     new Gauge[Int] {
-      def value = {
-        com.yammer.metrics.Metrics.defaultRegistry().allMetrics().size()
+      def getValue: Int = {
+        new Metrics().metrics().keySet().size()
       }
     }
   )
 
-  val consumerIdString = {
+  val consumerIdString: String = {
     var consumerUuid : String = null
     config.consumerId match {
       case Some(consumerId) // for testing only
@@ -131,7 +132,7 @@ private[kafka] class ZookeeperConsumerConnector(val config: ConsumerConfig,
       => val uuid = UUID.randomUUID()
       consumerUuid = "%s-%d-%s".format(
         InetAddress.getLocalHost.getHostName, System.currentTimeMillis,
-        uuid.getMostSignificantBits().toHexString.substring(0,8))
+        uuid.getMostSignificantBits.toHexString.substring(0,8))
     }
     config.groupId + "_" + consumerUuid
   }
@@ -565,7 +566,7 @@ private[kafka] class ZookeeperConsumerConnector(val config: ConsumerConfig,
     @volatile private var allTopicsOwnedPartitionsCount = 0
     newGauge("OwnedPartitionsCount",
       new Gauge[Int] {
-        def value() = allTopicsOwnedPartitionsCount
+        def getValue: Int = allTopicsOwnedPartitionsCount
       },
       Map("clientId" -> config.clientId, "groupId" -> config.groupId))
 
@@ -736,7 +737,7 @@ private[kafka] class ZookeeperConsumerConnector(val config: ConsumerConfig,
                                       .foreach { case (topic, partitionThreadPairs) =>
               newGauge("OwnedPartitionsCount",
                 new Gauge[Int] {
-                  def value() = partitionThreadPairs.size
+                  def getValue() = partitionThreadPairs.size
                 },
                 ownedPartitionsCountMetricTags(topic))
             }
@@ -944,7 +945,7 @@ private[kafka] class ZookeeperConsumerConnector(val config: ConsumerConfig,
       newGauge(
         "FetchQueueSize",
         new Gauge[Int] {
-          def value = q.size
+          def getValue: Int = q.size
         },
         Map("clientId" -> config.clientId,
           "topic" -> topicThreadId._1,
