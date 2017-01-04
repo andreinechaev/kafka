@@ -686,11 +686,11 @@ public class Fetcher<K, V> {
                 }
 
                 List<ConsumerRecord<K, V>> parsed = new ArrayList<>();
-                for (LogEntry logEntry : partition.records) {
+                for (LogEntry logEntry : partition.records.deepEntries()) {
                     // Skip the messages earlier than current position.
                     if (logEntry.offset() >= position) {
                         parsed.add(parseRecord(tp, logEntry));
-                        bytes += logEntry.size();
+                        bytes += logEntry.sizeInBytes();
                     }
                 }
 
@@ -701,6 +701,9 @@ public class Fetcher<K, V> {
                     parsedRecords = new PartitionRecords<>(fetchOffset, tp, parsed);
                     ConsumerRecord<K, V> record = parsed.get(parsed.size() - 1);
                     this.sensors.recordsFetchLag.record(partition.highWatermark - record.offset());
+                } else if (partition.highWatermark >= 0) {
+                    log.trace("Received empty fetch response for partition {} with offset {}", tp, position);
+                    this.sensors.recordsFetchLag.record(partition.highWatermark - fetchOffset);
                 }
             } else if (error == Errors.NOT_LEADER_FOR_PARTITION) {
                 log.debug("Error in fetch for partition {}: {}", tp, error.exceptionName());
