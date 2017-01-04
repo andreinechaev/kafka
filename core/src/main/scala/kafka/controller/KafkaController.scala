@@ -176,7 +176,7 @@ class KafkaController(val config: KafkaConfig, zkUtils: ZkUtils, val brokerState
   newGauge(
     "ActiveControllerCount",
     new Gauge[Int] {
-      def getValue() = if (isActive()) 1 else 0
+      def getValue() = if (isActive) 1 else 0
     }
   )
 

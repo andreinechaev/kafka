@@ -148,8 +148,13 @@ class AddPartitionsTest extends ZooKeeperTestHarness {
     TestUtils.waitUntilMetadataIsPropagated(servers, topic3, 5)
     TestUtils.waitUntilMetadataIsPropagated(servers, topic3, 6)
 
-    val metadata = ClientUtils.fetchTopicMetadata(Set(topic3), brokers.map(_.getBrokerEndPoint(SecurityProtocol.PLAINTEXT)), "AddPartitionsTest-testReplicaPlacementAllServers",
-      2000,0).topicsMetadata
+    val metadata = ClientUtils.fetchTopicMetadata(
+      Set(topic3),
+      brokers.map(_.getBrokerEndPoint(SecurityProtocol.PLAINTEXT)),
+      "AddPartitionsTest-testReplicaPlacementAllServers",
+      2000,
+      0
+    ).topicsMetadata
 
     val metaDataForTopic3 = metadata.find(p => p.topic == topic3).get
 
